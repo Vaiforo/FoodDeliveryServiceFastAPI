@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package notification;
+
+service NotificationInternalService {
+  rpc CreateNotification (CreateNotificationRequest) returns (NotificationReply);
+  rpc GetNotificationByOrder (OrderRequest) returns (NotificationReply);
+}
+
+message CreateNotificationRequest {
+  int32 order_id = 1;
+  string channel = 2;
+  string message = 3;
+  string status = 4;
+}
+
+message OrderRequest {
+  int32 order_id = 1;
+}
+
+message NotificationReply {
+  int32 id = 1;
+  int32 order_id = 2;
+  string channel = 3;
+  string message = 4;
+  string status = 5;
+}

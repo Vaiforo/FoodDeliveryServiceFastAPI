@@ -1,0 +1,123 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: food-postgres
+    environment:
+      POSTGRES_DB: food_delivery
+      POSTGRES_USER: food
+      POSTGRES_PASSWORD: food
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - food-net
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: ./services/payment_service/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg2://food:food@postgres:5432/food_delivery
+      SERVICE_PORT: 8001
+      GRPC_PORT: 50051
+    depends_on:
+      - postgres
+    ports:
+      - "8001:8001"
+      - "50051:50051"
+    networks:
+      - food-net
+
+  courier-service:
+    build:
+      context: .
+      dockerfile: ./services/courier_service/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg2://food:food@postgres:5432/food_delivery
+      SERVICE_PORT: 8002
+      GRPC_PORT: 50052
+    depends_on:
+      - postgres
+    ports:
+      - "8002:8002"
+      - "50052:50052"
+    networks:
+      - food-net
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: ./services/notification_service/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg2://food:food@postgres:5432/food_delivery
+      SERVICE_PORT: 8003
+      GRPC_PORT: 50053
+    depends_on:
+      - postgres
+    ports:
+      - "8003:8003"
+      - "50053:50053"
+    networks:
+      - food-net
+
+  product-service:
+    build:
+      context: .
+      dockerfile: ./services/product_service/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg2://food:food@postgres:5432/food_delivery
+      SERVICE_PORT: 8004
+      PAYMENT_SERVICE_URL: http://payment-service:8001
+      COURIER_SERVICE_URL: http://courier-service:8002
+      NOTIFICATION_SERVICE_URL: http://notification-service:8003
+      PAYMENT_GRPC_TARGET: payment-service:50051
+      COURIER_GRPC_TARGET: courier-service:50052
+      NOTIFICATION_GRPC_TARGET: notification-service:50053
+      INTERNAL_MODE: ${INTERNAL_MODE:-rest}
+    depends_on:
+      - postgres
+      - payment-service
+      - courier-service
+      - notification-service
+    ports:
+      - "8004:8004"
+    networks:
+      - food-net
+
+  gateway-service:
+    build:
+      context: .
+      dockerfile: ./services/gateway_service/Dockerfile
+    environment:
+      SERVICE_PORT: 8000
+      PRODUCT_SERVICE_URL: http://product-service:8004
+    depends_on:
+      - product-service
+    ports:
+      - "8000:8000"
+    networks:
+      - food-net
+
+  benchmark-client:
+    build:
+      context: .
+      dockerfile: ./benchmark/Dockerfile
+    profiles: ["bench"]
+    environment:
+      GATEWAY_URL: http://gateway-service:8000
+      RUNS: 100
+      MODE_LABEL: ${INTERNAL_MODE:-rest}
+      RESULTS_DIR: /app/benchmark/results
+    depends_on:
+      - gateway-service
+    volumes:
+      - ./benchmark/results:/app/benchmark/results
+    networks:
+      - food-net
+
+networks:
+  food-net:
+    driver: bridge

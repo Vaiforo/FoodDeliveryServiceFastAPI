@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package payment;
+
+service PaymentInternalService {
+  rpc CreatePayment (CreatePaymentRequest) returns (PaymentReply);
+  rpc GetPaymentByOrder (OrderRequest) returns (PaymentReply);
+}
+
+message CreatePaymentRequest {
+  int32 order_id = 1;
+  double amount = 2;
+  string status = 3;
+}
+
+message OrderRequest {
+  int32 order_id = 1;
+}
+
+message PaymentReply {
+  int32 id = 1;
+  int32 order_id = 2;
+  double amount = 3;
+  string status = 4;
+}

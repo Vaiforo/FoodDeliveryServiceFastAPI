@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package courier;
+
+service CourierInternalService {
+  rpc CreateDelivery (CreateDeliveryRequest) returns (DeliveryReply);
+  rpc GetDeliveryByOrder (OrderRequest) returns (DeliveryReply);
+}
+
+message CreateDeliveryRequest {
+  int32 order_id = 1;
+  string address = 2;
+  string status = 3;
+}
+
+message OrderRequest {
+  int32 order_id = 1;
+}
+
+message DeliveryReply {
+  int32 id = 1;
+  int32 order_id = 2;
+  int32 courier_id = 3;
+  string address = 4;
+  string status = 5;
+}
